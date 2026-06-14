@@ -49,15 +49,15 @@ npm start
 ## API Endpoints
 
 ### Authentication
-POST /api/auth/register
-POST /api/auth/login
-POST /api/auth/logout
+-POST /api/auth/register
+-POST /api/auth/login
+-POST /api/auth/logout
 
 ### Accounts
-POST /api/accounts
-GET /api/accounts
-GET /api/accounts/balance/:accountId
+-POST /api/accounts
+-GET /api/accounts
+-GET /api/accounts/balance/:accountId
 
 ### Transactions
-POST /api/transactions
-POST /api/transactions/system/initial-funds
+-POST /api/transactions
+-POST /api/transactions/system/initial-funds
