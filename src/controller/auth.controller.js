@@ -3,6 +3,7 @@ const jwt = require("jsonwebtoken");
 const emailService = require("../services/email.service");
 const tokenBlackListModel = require("../models/blackList.model");
 const crypto = require("crypto");
+const emailEnabled = process.env.EMAIL_ENABLED === "true";
 
 function hashVerificationToken(token) {
   return crypto.createHash("sha256").update(token).digest("hex");
@@ -32,6 +33,10 @@ async function userRegisterController(req, res) {
       message: "User already exists",
       status: "Failed",
     });
+  if (!emailEnabled) {
+    const user = await userModel.create({ email, username, password, emailVerified: true });
+    return issueJwt(user, res);
+  }
   const verificationToken = crypto.randomBytes(32).toString("hex");
   const user = await userModel.create({
     email,
@@ -68,11 +73,13 @@ async function userLoginCOntroller(req, res) {
     });
   }
 
-  if (!user.emailVerified) {
+  if (emailEnabled && !user.emailVerified) {
     return res.status(403).json({
       message: "Please verify your email address before signing in.",
     });
   }
+
+  if (!emailEnabled) return issueJwt(user, res);
 
   const otp = createOtp();
   user.loginOtpHash = hashVerificationToken(otp);
@@ -87,6 +94,7 @@ async function userLoginCOntroller(req, res) {
 }
 
 async function verifyLoginOtpController(req, res) {
+  if (!emailEnabled) return res.status(400).json({ message: "Email OTP is disabled in demo mode." });
   const email = req.body.email?.trim().toLowerCase();
   const otp = String(req.body.otp || "").trim();
   const user = await userModel.findOne({ email }).select("+loginOtpHash +loginOtpExpiresAt");
@@ -100,6 +108,7 @@ async function verifyLoginOtpController(req, res) {
 }
 
 async function requestPasswordResetController(req, res) {
+  if (!emailEnabled) return res.status(503).json({ message: "Email services are disabled in demo mode." });
   const email = req.body.email?.trim().toLowerCase();
   const user = await userModel.findOne({ email });
   const response = { message: "If that account exists, a password reset code has been sent." };

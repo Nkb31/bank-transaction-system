@@ -1,6 +1,7 @@
 const nodemailer = require("nodemailer");
+const emailEnabled = process.env.EMAIL_ENABLED === "true";
 
-const transporter = nodemailer.createTransport(
+const transporter = emailEnabled && nodemailer.createTransport(
   process.env.EMAIL_PASS
     ? {
         service: "gmail",
@@ -22,7 +23,7 @@ const transporter = nodemailer.createTransport(
 );
 
 // Verify the connection configuration
-transporter.verify((error, success) => {
+if (transporter) transporter.verify((error, success) => {
   if (error) {
     console.error("Error connecting to email server:", error);
   } else {
@@ -32,6 +33,7 @@ transporter.verify((error, success) => {
 
 // Function to send email
 const sendEmail = async (to, subject, text, html, { required = false } = {}) => {
+  if (!emailEnabled) return;
   try {
     const info = await transporter.sendMail({
       from: `"Backend Ledger" <${process.env.EMAIL_USER}>`, // sender address

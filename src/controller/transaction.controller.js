@@ -3,6 +3,7 @@ const ledgerModel = require("../models/ledger.model");
 const emailService = require("../services/email.service");
 const accountModel = require("../models/account.model");
 const mongoose = require("mongoose");
+const emailEnabled = process.env.EMAIL_ENABLED === "true";
 
 async function createTransaction(req, res) {
   /**
@@ -156,12 +157,9 @@ async function createTransaction(req, res) {
   /**
    * 10. Send email notification
    */
-  await emailService.sendTransactionEmail(
-    req.user.email,
-    req.user.username,
-    amount,
-    toAccount,
-  );
+  if (emailEnabled) {
+    await emailService.sendTransactionEmail(req.user.email, req.user.username, amount, toAccount);
+  }
 
   return res.status(201).json({
     message: "Transaction completed successfully",
