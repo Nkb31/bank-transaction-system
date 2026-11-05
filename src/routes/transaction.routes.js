@@ -2,6 +2,11 @@ const { Router } = require("express");
 const transactionController = require("../controller/transaction.controller");
 const transactionRouter = Router();
 const authMiddleware = require("../middleware/auth.middleware");
+transactionRouter.get(
+  "/",
+  authMiddleware.authMiddleware,
+  transactionController.getUserTransactions,
+);
 transactionRouter.post(
   "/",
   authMiddleware.authMiddleware,

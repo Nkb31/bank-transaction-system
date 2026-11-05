@@ -1,5 +1,15 @@
-require("dotenv").config();
+require("dotenv").config({ override: true });
 const app = require("./src/app");
 const connectToDB = require("./src/config/db");
-connectToDB();
-app.listen(3000, () => console.log("server is running"));
+
+async function startServer() {
+  try {
+    await connectToDB();
+    const port = process.env.PORT || 3000;
+    app.listen(port, () => console.log(`server is running on port ${port}`));
+  } catch {
+    process.exitCode = 1;
+  }
+}
+
+startServer();

@@ -18,6 +18,7 @@ async function createTransaction(req, res) {
 
   const fromUserAccount = await accountModel.findOne({
     _id: fromAccount,
+    user: req.user._id,
   });
 
   const toUserAccount = await accountModel.findOne({
@@ -248,7 +249,25 @@ async function createInitialFundsTransaction(req, res) {
   });
 }
 
+async function getUserTransactions(req, res) {
+  const accounts = await accountModel.find({ user: req.user._id }).select("_id").lean();
+  const accountIds = accounts.map((account) => account._id);
+  const transactions = await transactionModel
+    .find({
+      $or: [
+        { fromAccount: { $in: accountIds } },
+        { toAccount: { $in: accountIds } },
+      ],
+    })
+    .sort({ createdAt: -1 })
+    .limit(50)
+    .lean();
+
+  res.status(200).json({ transactions });
+}
+
 module.exports = {
   createTransaction,
   createInitialFundsTransaction,
+  getUserTransactions,
 };
