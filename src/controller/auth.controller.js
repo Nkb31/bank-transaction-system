@@ -25,7 +25,7 @@ async function userRegisterController(req, res) {
     },
     token,
   });
-  await emailService.sendRegistrationEmail(user.email, user.name);
+  await emailService.sendRegistrationEmail(user.email, user.username);
 }
 async function userLoginCOntroller(req, res) {
   const { email, password } = req.body;
