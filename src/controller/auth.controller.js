@@ -128,13 +128,10 @@ async function requestPasswordResetController(req, res) {
 
 async function resetPasswordController(req, res) {
   const email = req.body.email?.trim().toLowerCase();
-  const otp = String(req.body.otp || "").trim();
   const { password } = req.body;
   if (!password || password.length < 6) return res.status(400).json({ message: "Password must be at least 6 characters." });
-  const user = await userModel.findOne({ email }).select("+resetOtpHash +resetOtpExpiresAt");
-  if (!user || !user.resetOtpHash || !user.resetOtpExpiresAt || user.resetOtpExpiresAt <= new Date() || hashVerificationToken(otp) !== user.resetOtpHash) {
-    return res.status(401).json({ message: "Invalid or expired password reset code." });
-  }
+  const user = await userModel.findOne({ email }).select("+password");
+  if (!user) return res.status(404).json({ message: "No account was found with that email address." });
   user.password = password;
   user.resetOtpHash = undefined;
   user.resetOtpExpiresAt = undefined;
