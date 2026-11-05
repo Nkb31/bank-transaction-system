@@ -29,6 +29,22 @@ const userSchema = new mongoose.Schema(
       select: false,
       default: false,
     },
+    emailVerified: {
+      type: Boolean,
+      default: false,
+    },
+    emailVerificationTokenHash: {
+      type: String,
+      select: false,
+    },
+    emailVerificationTokenExpiresAt: {
+      type: Date,
+      select: false,
+    },
+    loginOtpHash: { type: String, select: false },
+    loginOtpExpiresAt: { type: Date, select: false },
+    resetOtpHash: { type: String, select: false },
+    resetOtpExpiresAt: { type: Date, select: false },
   },
   {
     timestamps: true,
