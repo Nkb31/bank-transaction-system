@@ -4,9 +4,19 @@ const cookieParser = require("cookie-parser");
 const app = express();
 const cors = require("cors");
 
-app.use(cors());
-app.use(express.json());
+const allowedOrigins = (process.env.FRONTEND_URL || "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
+app.use(cors({
+  origin: allowedOrigins.length
+    ? (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+        return callback(null, false);
+      }
+    : true,
+}));
 app.use(express.json());
 app.use(cookieParser());
 

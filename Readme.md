@@ -39,7 +39,11 @@ Create a `.env` file:
 PORT=5000
 MONGO_URI=your_mongodb_connection_string
 JWT_SECRET=your_secret_key
+FRONTEND_URL=http://localhost:5173
 ```
+
+For production, set `FRONTEND_URL` to the deployed frontend origin, such as
+`https://bts-frontend-peach.vercel.app`. Multiple allowed origins can be comma-separated.
 
 ### Run the Server
 
