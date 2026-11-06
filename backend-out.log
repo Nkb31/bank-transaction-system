@@ -1,0 +1,3 @@
+[dotenv@17.3.1] injecting env (2) from .env -- tip: ⚙️  override existing env vars with { override: true }
+DB is connected
+server is running on port 3000
