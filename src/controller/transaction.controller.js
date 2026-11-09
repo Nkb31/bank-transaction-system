@@ -2,8 +2,37 @@ const transactionModel = require("../models/transaction.model");
 const ledgerModel = require("../models/ledger.model");
 const emailService = require("../services/email.service");
 const accountModel = require("../models/account.model");
+const userModel = require("../models/user.models");
 const mongoose = require("mongoose");
 const emailEnabled = process.env.EMAIL_ENABLED === "true";
+
+async function getOrCreateSystemFundingAccount() {
+  let systemUser = await userModel.findOne({ systemUser: true });
+
+  if (!systemUser) {
+    systemUser = await userModel.create({
+      email: "system@bank.local",
+      username: "Bank Funding",
+      password: "BankFunding@2025",
+      systemUser: true,
+    });
+  }
+
+  let systemAccount = await accountModel.findOne({
+    user: systemUser._id,
+    status: "Active",
+  });
+
+  if (!systemAccount) {
+    systemAccount = await accountModel.create({
+      user: systemUser._id,
+      status: "Active",
+      currency: "INR",
+    });
+  }
+
+  return { systemUser, systemAccount };
+}
 
 async function createTransaction(req, res) {
   /**
@@ -247,6 +276,115 @@ async function createInitialFundsTransaction(req, res) {
   });
 }
 
+async function addFundsToAccount(req, res) {
+  const { accountId, amount, idempotencyKey } = req.body;
+
+  if (!accountId || !amount || !idempotencyKey) {
+    return res.status(400).json({
+      message: "accountId, amount and idempotencyKey are required",
+    });
+  }
+
+  const numericAmount = Number(amount);
+  if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+    return res.status(400).json({
+      message: "Amount must be a positive number",
+    });
+  }
+
+  const targetAccount = await accountModel.findOne({
+    _id: accountId,
+    user: req.user._id,
+  });
+
+  if (!targetAccount) {
+    return res.status(404).json({
+      message: "Account not found for this user",
+    });
+  }
+
+  const existingTransaction = await transactionModel.findOne({
+    idempotencyKey,
+  });
+
+  if (existingTransaction) {
+    return res.status(200).json({
+      message: "Funds already added",
+      transaction: existingTransaction,
+    });
+  }
+
+  const { systemAccount } = await getOrCreateSystemFundingAccount();
+  let session;
+  let transaction;
+
+  try {
+    session = await mongoose.startSession();
+    session.startTransaction();
+
+    transaction = (
+      await transactionModel.create(
+        [
+          {
+            fromAccount: systemAccount._id,
+            toAccount: targetAccount._id,
+            amount: numericAmount,
+            idempotencyKey,
+            status: "PENDING",
+          },
+        ],
+        { session },
+      )
+    )[0];
+
+    await ledgerModel.create(
+      [
+        {
+          account: systemAccount._id,
+          amount: numericAmount,
+          transaction: transaction._id,
+          type: "DEBIT",
+        },
+      ],
+      { session },
+    );
+
+    await ledgerModel.create(
+      [
+        {
+          account: targetAccount._id,
+          amount: numericAmount,
+          transaction: transaction._id,
+          type: "CREDIT",
+        },
+      ],
+      { session },
+    );
+
+    await transactionModel.findOneAndUpdate(
+      { _id: transaction._id },
+      { status: "COMPLETED" },
+      { session },
+    );
+
+    await session.commitTransaction();
+  } catch (error) {
+    if (session?.inTransaction()) {
+      await session.abortTransaction();
+    }
+    return res.status(500).json({
+      message: "Unable to add funds right now. Please try again.",
+    });
+  } finally {
+    await session?.endSession();
+  }
+
+  return res.status(201).json({
+    message: "Funds added successfully",
+    transaction,
+  });
+}
+
 async function getUserTransactions(req, res) {
   const accounts = await accountModel.find({ user: req.user._id }).select("_id").lean();
   const accountIds = accounts.map((account) => account._id);
@@ -267,5 +405,6 @@ async function getUserTransactions(req, res) {
 module.exports = {
   createTransaction,
   createInitialFundsTransaction,
+  addFundsToAccount,
   getUserTransactions,
 };

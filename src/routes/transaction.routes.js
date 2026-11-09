@@ -12,6 +12,11 @@ transactionRouter.post(
   authMiddleware.authMiddleware,
   transactionController.createTransaction,
 );
+transactionRouter.post(
+  "/deposit",
+  authMiddleware.authMiddleware,
+  transactionController.addFundsToAccount,
+);
 /**
  * - Create initial funds transaction from system user to new account
  */
